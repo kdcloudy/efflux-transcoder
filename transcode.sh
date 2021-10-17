@@ -11,8 +11,7 @@ then
 exit $err
 fi
 
-
-aws s3 cp s3://efflux-raw/$filepath
+wget https://efflux-raw.s3.ap-south-1.amazonaws.com/$filepath
 
 ffmpeg -i $filepath -c:v copy -filter:v scale=720:-1 -c:a copy output-720.mp4
 aws s3 cp output-720.mp4 s3://efflux-raw/OUTPUT/output-720.mp4
