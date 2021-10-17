@@ -17,8 +17,6 @@ aws s3 cp s3://efflux-raw/$filepath
 ffmpeg -i $filepath -c:v copy -filter:v scale=720:-1 -c:a copy output-720.mp4
 aws s3 cp output-720.mp4 s3://efflux-raw/OUTPUT/output-720.mp4
 
-wget 
-
 
 # ffmpeg -i $filepath -c:v copy -c:a copy -tag:v hvc1 output.mp4
 
