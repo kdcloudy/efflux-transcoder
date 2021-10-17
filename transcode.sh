@@ -1,39 +1,24 @@
-#!/bin/bash
+#!/bin/sh
 
-var7=$(ec2metadata --instance-id)
+ssh -i "EffluxKeys.pem" ubuntu@ec2-65-2-83-255.ap-south-1.compute.amazonaws.com
 
-aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name video-conversion-w-git --protected-from-scale-in
+echo "Efflux Video Transcoding"
+echo "Developed by Kaustubh Debnath and Sumit Prakash"
+echo "Enter the file name to be processed: "
+read filepath
+if [! -d $filepath]
+then
+exit $err
+fi
 
-main_obj=$(aws sqs receive-message --queue-url https://sqs.ap-south-1.amazonaws.com/968225076544/video-streaming --attribute-names All --message-attribute-names All --max-number-of-messages 1)
 
-echo -e $main_obj > version.json
+aws s3 cp s3://efflux-raw/$filepath
 
-var1=$(jq '.Messages[] | {Body} | .Body | fromjson | . | .Records[] | {s3} | .s3 | .bucket | .name'  version.json) 
+ffmpeg -i $filepath -c:v copy -filter:v scale=720:-1 -c:a copy output-720.mp4
+aws s3 cp output-720.mp4 s3://efflux-raw/OUTPUT/output-720.mp4
 
-var2=$(jq '.Messages[] | {Body} | .Body | fromjson | . | .Records[] | {s3} | .s3 | .object | .key'  version.json)
+ffmpeg -i $filepath -c:v libx265  -filter:v scale=480:-1 -c:v copy output-720.mp4
 
-var3=$(echo s3://$var1/$var2 | tr -d '""')
 
-var4=$(echo $var2 | tr -d '""')
+# ffmpeg -i $filepath -c:v copy -c:a copy -tag:v hvc1 output.mp4
 
-var5=$(echo $var4-1080.mp4)
-
-var6=$(echo $var4-720.mp4)
-
-aws s3 cp $var3 $var4
-
-ffmpeg -i $var4 -filter:v "scale=w=1920:h=-1" -b:v 6M $var5
-
-ffmpeg -i $var4 -filter:v "scale=w=1280:h=-1" -b:v 3M $var6
-
-aws s3 cp $var5 s3://video-streaming-output-bucket
-
-aws s3 cp $var6 s3://video-streaming-output-bucket
-
-var8=$(jq '.Messages[] | {ReceiptHandle} | .ReceiptHandle'  version.json)
-
-receipt_handle=$(echo $var8 | tr -d '""')
-
-aws sqs delete-message --queue-url https://sqs.ap-south-1.amazonaws.com/968225076544/video-streaming --receipt-handle $receipt_handle
-
-aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name video-conversion-w-git --no-protected-from-scale-in
