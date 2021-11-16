@@ -1,21 +1,39 @@
-#!/bin/sh
+#!/bin/bash -e
 
+var7=$(ec2metadata --instance-id)
 
+aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name effluxASG --protected-from-scale-in
 
-echo "Efflux Video Transcoding"
-echo "Developed by Kaustubh Debnath and Sumit Prakash"
-echo "Enter the file name to be processed: "
-read filepath
-if [! -d $filepath]
-then
-exit $err
-fi
+main_obj=$(aws sqs receive-message --queue-url https://sqs.ap-south-1.amazonaws.com/265595266672/EffluxQueue --attribute-names All --message-attribute-names All --max-number-of-messages 1)
 
-wget https://efflux-raw.s3.ap-south-1.amazonaws.com/$filepath
+echo -e $main_obj > version.json
 
-ffmpeg -i $filepath -c:v copy -filter:v scale=720:-1 -c:a copy output-720.mp4
-aws s3 cp output-720.mp4 s3://efflux-raw/OUTPUT/output-720.mp4
+var1=$(jq '.Messages[] | {Body} | .Body | fromjson | . | .Records[] | {s3} | .s3 | .bucket | .name'  version.json) 
 
+var2=$(jq '.Messages[] | {Body} | .Body | fromjson | . | .Records[] | {s3} | .s3 | .object | .key'  version.json)
 
-# ffmpeg -i $filepath -c:v copy -c:a copy -tag:v hvc1 output.mp4
+var3=$(echo s3://$var1/$var2 | tr -d '""')
 
+var4=$(echo $var2 | tr -d '""')
+
+# var5=$(echo $var4-1080.mp4)
+
+var6=$(echo $var4-720.mp4)
+
+aws s3 cp $var3 $var4
+
+# ffmpeg -i $var4 -filter:v "scale=w=1920:h=-1" -b:v 6M $var5
+
+ffmpeg -i $var4 -filter:v "scale=w=1280:h=-1" -b:v 3M $var6
+
+# aws s3 cp $var5 s3://efflux-raw/OUTPUT/
+
+aws s3 cp $var6 s3://efflux-raw/OUTPUT/
+
+var8=$(jq '.Messages[] | {ReceiptHandle} | .ReceiptHandle'  version.json)
+
+receipt_handle=$(echo $var8 | tr -d '""')
+
+aws sqs delete-message --queue-url https://sqs.ap-south-1.amazonaws.com/265595266672/EffluxQueue --receipt-handle $receipt_handle
+
+aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name effluxASG --no-protected-from-scale-in
