@@ -2,7 +2,7 @@
 
 var7=$(ec2metadata --instance-id)
 
-aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name effluxASG --protected-from-scale-in
+aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name efflux-new-ASG --protected-from-scale-in
 
 main_obj=$(aws sqs receive-message --queue-url https://sqs.ap-south-1.amazonaws.com/265595266672/EffluxQueue --attribute-names All --message-attribute-names All --max-number-of-messages 1)
 
@@ -28,7 +28,7 @@ ffmpeg -i $var4 -filter:v "scale=w=1280:h=-1" -b:v 3M $var6
 
 # aws s3 cp $var5 s3://efflux-raw/OUTPUT/
 
-aws s3 cp $var6 s3://efflux-raw/OUTPUT/
+aws s3 cp $var6 s3://efflux-raw/
 
 var8=$(jq '.Messages[] | {ReceiptHandle} | .ReceiptHandle'  version.json)
 
@@ -36,4 +36,4 @@ receipt_handle=$(echo $var8 | tr -d '""')
 
 aws sqs delete-message --queue-url https://sqs.ap-south-1.amazonaws.com/265595266672/EffluxQueue --receipt-handle $receipt_handle
 
-aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name effluxASG --no-protected-from-scale-in
+aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name efflux-new-ASG --no-protected-from-scale-in
