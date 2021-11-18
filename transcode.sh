@@ -2,8 +2,8 @@
   
 var7=$(ec2metadata --instance-id)
 
-# aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name efflux-new-ASG --protected-from-scale-in
-# export AWS_DEFAULT_REGION=ap-south-1
+aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name efflux-new-ASG --protected-from-scale-in
+export AWS_DEFAULT_REGION=ap-south-1
 
 main_obj=$(aws sqs receive-message --queue-url https://sqs.ap-south-1.amazonaws.com/265595266672/EffluxQueue)
 
@@ -39,4 +39,4 @@ receipt_handle=$(echo $var8 | tr -d '""')
 
 aws sqs delete-message --queue-url https://sqs.ap-south-1.amazonaws.com/265595266672/EffluxQueue --receipt-handle $receipt_handle
 
-# aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name efflux-new-ASG --no-protected-from-scale-in
+aws autoscaling set-instance-protection --instance-ids $var7 --auto-scaling-group-name efflux-new-ASG --no-protected-from-scale-in
